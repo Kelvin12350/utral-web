@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultralight | Link Device</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #050505; --card: #111111; --accent: #00ff88; --text: #fff; --dim: #888; --border: #222; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .container { background: var(--card); width: 90%; max-width: 400px; padding: 40px; border-radius: 20px; border: 1px solid var(--border); text-align: center; box-shadow: 0 0 50px rgba(0,255,136,0.05); }
+        h1 { margin: 0; background: linear-gradient(to right, #fff, #888); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px; }
+        .tabs { display: flex; background: #1a1a1a; padding: 4px; border-radius: 10px; margin: 30px 0; border: 1px solid var(--border); }
+        .tab { flex: 1; padding: 10px; cursor: pointer; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--dim); transition: 0.3s; }
+        .tab.active { background: var(--accent); color: #000; }
+        input { width: 100%; padding: 15px; background: #0a0a0a; border: 1px solid var(--border); border-radius: 10px; color: #fff; font-size: 16px; outline: none; box-sizing: border-box; }
+        input:focus { border-color: var(--accent); }
+        .btn { width: 100%; padding: 15px; background: var(--text); color: #000; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; margin-top: 15px; transition: 0.2s; }
+        .btn:hover { background: var(--accent); }
+        .result-box { margin-top: 20px; padding: 20px; background: #0a0a0a; border: 1px dashed var(--border); border-radius: 10px; display: none; }
+        .code { font-family: monospace; font-size: 24px; color: var(--accent); letter-spacing: 2px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ULTRALIGHT</h1>
+        <p style="color:var(--dim); font-size:14px; margin-top:5px">Secure Session Manager</p>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('code')">Pairing Code</div>
+            <div class="tab" onclick="switchTab('qr')">QR Scan</div>
+        </div>
+
+        <div id="section-code">
+            <input type="number" id="number" placeholder="2348012345678">
+            <button class="btn" onclick="getCode()" id="btn-code">GET CODE</button>
+        </div>
+
+        <div id="section-qr" class="hidden">
+            <p style="font-size:12px; color:var(--dim)">Open WhatsApp > Linked Devices > Link a Device</p>
+            <button class="btn" onclick="getQR()" id="btn-qr">GENERATE QR</button>
+        </div>
+
+        <div id="result" class="result-box">
+            <div id="loading" class="hidden" style="color:var(--dim); font-size:12px">Processing...</div>
+            <div id="result-text" class="code"></div>
+            <img id="qr-image" style="width:200px; border-radius:10px; background:white; padding:10px;" class="hidden">
+        </div>
+    </div>
+
+    <script>
+        function switchTab(t) {
+            document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('section-code').classList.toggle('hidden', t !== 'code');
+            document.getElementById('section-qr').classList.toggle('hidden', t !== 'qr');
+            document.getElementById('result').style.display = 'none';
+        }
+
+        async function getCode() {
+            const num = document.getElementById('number').value;
+            if(!num) return alert("Enter Number");
+            
+            const btn = document.getElementById('btn-code');
+            btn.innerText = "PROCESSING...";
+            btn.disabled = true;
+            
+            document.getElementById('result').style.display = 'none';
+
+            try {
+                const res = await (await fetch(`/pair?number=${num}`)).json();
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('qr-image').classList.add('hidden');
+                document.getElementById('result-text').classList.remove('hidden');
+                
+                if(res.code) document.getElementById('result-text').innerText = res.code;
+                else document.getElementById('result-text').innerHTML = `<span style="color:#ff4444; font-size:16px">${res.error}</span>`;
+                
+            } catch(e) { alert("Error connecting to server"); }
+            
+            btn.innerText = "GET CODE";
+            btn.disabled = false;
+        }
+
+        async function getQR() {
+            const btn = document.getElementById('btn-qr');
+            btn.innerText = "GENERATING...";
+            btn.disabled = true;
+            
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('result-text').classList.add('hidden');
+            document.getElementById('qr-image').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+
+            try {
+                const res = await (await fetch(`/qr`)).json();
+                document.getElementById('loading').classList.add('hidden');
+                
+                if(res.qr_img) {
+                    const img = document.getElementById('qr-image');
+                    img.src = res.qr_img;
+                    img.classList.remove('hidden');
+                } else {
+                    document.getElementById('result-text').innerHTML = `<span style="color:#ff4444; font-size:16px">${res.error || 'Failed'}</span>`;
+                    document.getElementById('result-text').classList.remove('hidden');
+                }
+            } catch(e) { alert("Error"); }
+            
+            btn.innerText = "GENERATE QR";
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>
+
